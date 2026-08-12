@@ -76,7 +76,6 @@ jobs:
       run: |
         python3 --version
         python3 -m pip --version
-        python3 -m pip install --upgrade pip setuptools wheel
 
     - name: 配置 QEMU (amd64)
       run: |
@@ -85,11 +84,12 @@ jobs:
                     --enable-gtk \
                     --enable-slirp \
                     --enable-sdl \
-                    --disable-werror
+                    --disable-werror \
+                    --disable-tests
 
-    - name: 编译
+    - name: 编译 (仅主程序)
       run: |
-        make -j$(nproc)
+        make qemu-system-arm.exe -j$(nproc)
 
     - name: 准备产物
       shell: cmd
@@ -107,7 +107,7 @@ jobs:
         compression-level: 9
 
   build-windows-arm64:
-    name: Windows ARM64
+    name: Windows ARM64 (交叉编译)
     runs-on: windows-latest
     defaults:
       run:
@@ -119,10 +119,10 @@ jobs:
       with:
         ref: quadcore
 
-    - name: Setup MSYS2 (ARM64)
+    - name: Setup MSYS2 (使用 mingw64 环境进行交叉编译)
       uses: msys2/setup-msys2@v2
       with:
-        msystem: clangarm64
+        msystem: mingw64
         update: true
         install: >-
           git
@@ -165,31 +165,30 @@ jobs:
           zstd:p
           libslirp:p
 
-    - name: 安装 Python 和 pip (ARM64)
+    - name: 安装 ARM64 交叉编译工具链
       run: |
         pacman -S --noconfirm \
-          mingw-w64-clang-aarch64-python \
-          mingw-w64-clang-aarch64-python-pip \
-          mingw-w64-clang-aarch64-python-setuptools \
-          mingw-w64-clang-aarch64-python-wheel
+          mingw-w64-x86_64-aarch64-mingw32-gcc \
+          mingw-w64-x86_64-aarch64-mingw32-binutils
 
     - name: 验证 Python 环境
       run: |
         python3 --version
-        python3 -m pip --version
         python3 -m pip install --upgrade pip setuptools wheel
 
-    - name: 配置 QEMU (ARM64)
+    - name: 配置 QEMU (ARM64 交叉编译)
       run: |
         ./configure --target-list=arm-softmmu \
                     --enable-gtk \
                     --enable-slirp \
                     --enable-sdl \
-                    --disable-werror
+                    --disable-werror \
+                    --disable-tests \
+                    --cross-prefix=aarch64-w64-mingw32-
 
-    - name: 编译
+    - name: 编译 (仅主程序)
       run: |
-        make -j$(nproc)
+        make qemu-system-arm.exe -j$(nproc)
 
     - name: 准备产物
       shell: cmd
@@ -197,7 +196,7 @@ jobs:
         mkdir artifacts-arm64
         copy build\qemu-system-arm.exe artifacts-arm64\
         robocopy build\pc-bios artifacts-arm64\pc-bios /E
-        echo 此版本适用于 Windows ARM64 > artifacts-arm64\README.txt
+        echo 此版本适用于 Windows ARM64 (交叉编译) > artifacts-arm64\README.txt
 
     - name: 上传产物 (arm64)
       uses: actions/upload-artifact@main
