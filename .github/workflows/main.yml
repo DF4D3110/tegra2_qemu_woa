@@ -24,19 +24,58 @@ jobs:
         msystem: mingw64
         update: true
         install: >-
-          git make bison diffutils flex grep sed
-          base-devel python python-setuptools python-pip
+          git
+          make
+          bison
+          diffutils
+          flex
+          grep
+          sed
+          base-devel
         pacboy: >-
-          toolchain:p binutils:p capstone:p ccache:p curl:p
-          cyrus-sasl:p dtc:p gcc:p glib2:p gnutls:p gtk3:p
-          libgcrypt:p libjpeg-turbo:p libnfs:p libpng:p
-          libssh:p libtasn1:p libusb:p lzo2:p nettle:p
-          ninja:p pixman:p pkgconf:p SDL2:p SDL2_image:p
-          snappy:p spice:p usbredir:p zstd:p libslirp:p
+          toolchain:p
+          binutils:p
+          capstone:p
+          ccache:p
+          curl:p
+          cyrus-sasl:p
+          dtc:p
+          gcc:p
+          glib2:p
+          gnutls:p
+          gtk3:p
+          libgcrypt:p
+          libjpeg-turbo:p
+          libnfs:p
+          libpng:p
+          libssh:p
+          libtasn1:p
+          libusb:p
+          lzo2:p
+          nettle:p
+          ninja:p
+          pixman:p
+          pkgconf:p
+          SDL2:p
+          SDL2_image:p
+          snappy:p
+          spice:p
+          usbredir:p
+          zstd:p
+          libslirp:p
+
+    - name: 安装 Python 和 pip
+      run: |
+        pacman -S --noconfirm \
+          mingw-w64-x86_64-python \
+          mingw-w64-x86_64-python-pip \
+          mingw-w64-x86_64-python-setuptools \
+          mingw-w64-x86_64-python-wheel
 
     - name: 验证 Python 环境
       run: |
         python3 --version
+        python3 -m pip --version
         python3 -m pip install --upgrade pip setuptools wheel
 
     - name: 配置 QEMU (amd64)
@@ -58,7 +97,7 @@ jobs:
         mkdir artifacts-amd64
         copy build\qemu-system-arm.exe artifacts-amd64\
         robocopy build\pc-bios artifacts-amd64\pc-bios /E
-        echo "此版本适用于 Windows x86_64 (AMD64)" > artifacts-amd64/README.txt
+        echo 此版本适用于 Windows x86_64 (AMD64) > artifacts-amd64\README.txt
 
     - name: 上传产物 (amd64)
       uses: actions/upload-artifact@main
@@ -86,30 +125,67 @@ jobs:
         msystem: clangarm64
         update: true
         install: >-
-          git make bison diffutils flex grep sed
-          base-devel python python-setuptools python-pip
+          git
+          make
+          bison
+          diffutils
+          flex
+          grep
+          sed
+          base-devel
         pacboy: >-
-          toolchain:p binutils:p capstone:p ccache:p curl:p
-          cyrus-sasl:p dtc:p gcc:p glib2:p gnutls:p gtk3:p
-          libgcrypt:p libjpeg-turbo:p libnfs:p libpng:p
-          libssh:p libtasn1:p libusb:p lzo2:p nettle:p
-          ninja:p pixman:p pkgconf:p SDL2:p SDL2_image:p
-          snappy:p spice:p usbredir:p zstd:p libslirp:p
+          toolchain:p
+          binutils:p
+          capstone:p
+          ccache:p
+          curl:p
+          cyrus-sasl:p
+          dtc:p
+          gcc:p
+          glib2:p
+          gnutls:p
+          gtk3:p
+          libgcrypt:p
+          libjpeg-turbo:p
+          libnfs:p
+          libpng:p
+          libssh:p
+          libtasn1:p
+          libusb:p
+          lzo2:p
+          nettle:p
+          ninja:p
+          pixman:p
+          pkgconf:p
+          SDL2:p
+          SDL2_image:p
+          snappy:p
+          spice:p
+          usbredir:p
+          zstd:p
+          libslirp:p
+
+    - name: 安装 Python 和 pip (ARM64)
+      run: |
+        pacman -S --noconfirm \
+          mingw-w64-clang-aarch64-python \
+          mingw-w64-clang-aarch64-python-pip \
+          mingw-w64-clang-aarch64-python-setuptools \
+          mingw-w64-clang-aarch64-python-wheel
 
     - name: 验证 Python 环境
       run: |
         python3 --version
+        python3 -m pip --version
         python3 -m pip install --upgrade pip setuptools wheel
 
     - name: 配置 QEMU (ARM64)
       run: |
         ./configure --target-list=arm-softmmu \
-                    --enable-whpx \
                     --enable-gtk \
                     --enable-slirp \
                     --enable-sdl \
-                    --disable-werror \
-                    --cross-prefix=aarch64-w64-mingw32-
+                    --disable-werror
 
     - name: 编译
       run: |
@@ -121,7 +197,7 @@ jobs:
         mkdir artifacts-arm64
         copy build\qemu-system-arm.exe artifacts-arm64\
         robocopy build\pc-bios artifacts-arm64\pc-bios /E
-        echo "此版本适用于 Windows ARM64" > artifacts-arm64/README.txt
+        echo 此版本适用于 Windows ARM64 > artifacts-arm64\README.txt
 
     - name: 上传产物 (arm64)
       uses: actions/upload-artifact@main
