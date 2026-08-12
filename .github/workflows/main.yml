@@ -24,14 +24,45 @@ jobs:
         msystem: mingw64
         update: true
         install: >-
-          git make bison diffutils flex grep sed base-devel
+          git
+          make
+          bison
+          diffutils
+          flex
+          grep
+          sed
+          base-devel
         pacboy: >-
-          toolchain:p binutils:p capstone:p ccache:p curl:p
-          cyrus-sasl:p dtc:p gcc:p glib2:p gnutls:p gtk3:p
-          libgcrypt:p libjpeg-turbo:p libnfs:p libpng:p
-          libssh:p libtasn1:p libusb:p lzo2:p nettle:p
-          ninja:p pixman:p pkgconf:p SDL2:p SDL2_image:p
-          snappy:p spice:p usbredir:p zstd:p libslirp:p
+          toolchain:p
+          binutils:p
+          capstone:p
+          ccache:p
+          curl:p
+          cyrus-sasl:p
+          dtc:p
+          gcc:p
+          glib2:p
+          gnutls:p
+          gtk3:p
+          libgcrypt:p
+          libjpeg-turbo:p
+          libnfs:p
+          libpng:p
+          libssh:p
+          libtasn1:p
+          libusb:p
+          lzo2:p
+          nettle:p
+          ninja:p
+          pixman:p
+          pkgconf:p
+          SDL2:p
+          SDL2_image:p
+          snappy:p
+          spice:p
+          usbredir:p
+          zstd:p
+          libslirp:p
 
     - name: 安装 Python 和 pip
       run: |
@@ -60,15 +91,58 @@ jobs:
       run: |
         make qemu-system-arm.exe -j$(nproc)
 
-    - name: 准备产物
+    - name: 准备产物 (包含运行库)
       shell: cmd
       run: |
         mkdir artifacts-amd64
+        
+        :: 复制主程序
         if exist build\qemu-system-arm.exe copy build\qemu-system-arm.exe artifacts-amd64\
+        
+        :: 复制 pc-bios
         if exist build\pc-bios robocopy build\pc-bios artifacts-amd64\pc-bios /E
+        
+        :: 复制运行库
+        copy D:\a\_temp\msys64\mingw64\bin\libgio-2.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libglib-2.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgmodule-2.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgobject-2.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libintl-8.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libpcre2-8-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libpixman-1-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libSDL2-2.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgtk-3-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgdk-3-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libcairo-2.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libpango-1.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libpangocairo-1.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libpangoft2-1.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libfontconfig-1.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libfreetype-6.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libharfbuzz-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libepoxy-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libpng16-16.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libjpeg-8.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libslirp-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libzstd.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\liblzo2-2.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgnutls-30.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libnettle-8.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libhogweed-6.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgmp-10.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libtasn1-6.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libp11-kit-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libffi-8.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgcc_s_seh-1.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libwinpthread-1.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libstdc++-6.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libgdk_pixbuf-2.0-0.dll artifacts-amd64\
+        copy D:\a\_temp\msys64\mingw64\bin\libatk-1.0-0.dll artifacts-amd64\
+        
         echo 此版本适用于 Windows x86_64 (AMD64) > artifacts-amd64\README.txt
+        echo 包含所有运行库 >> artifacts-amd64\README.txt
 
-    - name: 上传产物 (amd64)
+    - name: 上传产物
       uses: actions/upload-artifact@main
       with:
         name: qemu-tegra2-windows-amd64
