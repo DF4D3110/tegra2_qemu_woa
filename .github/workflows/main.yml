@@ -1,135 +1,131 @@
-name: Build
+name: Build Tegra2 QEMU (Cross-Platform)
 
 on:
   push:
-  pull_request:
   workflow_dispatch:
-    inputs: 
-      logLevel: 
-        description: 'Log level' 
-        required: true 
-        default: 'warning' 
-      environment:  
-        description: 'Environment to deploy' 
-        required: false 
-        default: 'staging'
 
 jobs:
-
-  build:
+  build-windows-amd64:
+    name: Windows x86_64
     runs-on: windows-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - { icon: '🟦', sys: mingw64, mode: dynamic }
-          - { icon: '🟦', sys: mingw64, mode: static }
-
-    name: 🚧${{ matrix.icon }} ${{ matrix.sys }} Build ${{ matrix.mode }}
     defaults:
       run:
         shell: msys2 {0}
+
     steps:
-
-    - name: '🧰 Checkout'
+    - name: Checkout quadcore 分支
       uses: actions/checkout@main
+      with:
+        ref: quadcore
 
-    - name: '${{ matrix.icon }} Setup MSYS2'
+    - name: Setup MSYS2
       uses: msys2/setup-msys2@v2
       with:
-        msystem: ${{ matrix.sys }}
+        msystem: mingw64
         update: true
         install: >-
-          git
-          make
-          bison
-          diffutils
-          flex
-          grep
-          sed
-          base-devel
-          python
-          python-setuptools
+          git make bison diffutils flex grep sed
+          base-devel python python-setuptools python-pip
         pacboy: >-
-          toolchain:p
-          binutils:p
-          capstone:p
-          ccache:p
-          curl:p
-          cyrus-sasl:p
-          dtc:p
-          gcc:p
-          glib2:p
-          gnutls:p
-          gtk3:p
-          libgcrypt:p
-          libjpeg-turbo:p
-          libnfs:p
-          libpng:p
-          libssh:p
-          libtasn1:p
-          libusb:p
-          lzo2:p
-          nettle:p
-          ninja:p
-          pixman:p
-          pkgconf:p
-          python:p
-          SDL2:p
-          SDL2_image:p
-          snappy:p
-          spice:p
-          usbredir:p
-          zstd:p
-          libslirp:p
+          toolchain:p binutils:p capstone:p ccache:p curl:p
+          cyrus-sasl:p dtc:p gcc:p glib2:p gnutls:p gtk3:p
+          libgcrypt:p libjpeg-turbo:p libnfs:p libpng:p
+          libssh:p libtasn1:p libusb:p lzo2:p nettle:p
+          ninja:p pixman:p pkgconf:p SDL2:p SDL2_image:p
+          snappy:p spice:p usbredir:p zstd:p libslirp:p
 
-    - name: Install pip
-      run: |
-        pacman -S --noconfirm mingw-w64-x86_64-python-pip
-        python3 -m pip --version
-
-    - name: Verify Python and setuptools
+    - name: 验证 Python 环境
       run: |
         python3 --version
-        python3 -m pip show setuptools || python3 -m pip install setuptools
+        python3 -m pip install --upgrade pip setuptools wheel
 
-    - name: 'Modify pkgconfig to avoid linker issues'
-      if: ${{ matrix.mode == 'static' }}
+    - name: 配置 QEMU (amd64)
       run: |
-        PKGCONFIG_FILE="$MINGW_PREFIX/lib/pkgconfig/gpg-error.pc"
-        sed -i 's#'$MINGW_PREFIX'/lib/libintl.dll.a#-llibintl#g' "$PKGCONFIG_FILE"
-        sed -i 's#'$MINGW_PREFIX'/lib/libiconv.dll.a#-llibiconv#g' "$PKGCONFIG_FILE"
+        ./configure --target-list=arm-softmmu \
+                    --enable-whpx \
+                    --enable-gtk \
+                    --enable-slirp \
+                    --enable-sdl \
+                    --disable-werror
 
-    - name: '🚧 Build QEMU (arm & aarch64) ${{ matrix.mode }}'
-      env:
-        arg: ${{ matrix.mode == 'dynamic' && '--enable-gtk --enable-sdl --enable-fdt=system --enable-avx2 --target-list=arm-softmmu,aarch64-softmmu --disable-werror' || '--disable-gtk --disable-spice --disable-usb-redir --disable-smartcard --disable-gnutls --disable-vnc-sasl --disable-libssh --enable-sdl --enable-fdt=system --enable-avx2 --target-list=arm-softmmu,aarch64-softmmu  --disable-werror --static --extra-cflags="-DCURL_STATICLIB -DLIBSSH_STATIC -DLIBSLIRP_STATIC -DCAIRO_WIN32_STATIC_BUILD" --extra-ldflags="-liconv"' }}
+    - name: 编译
       run: |
-        ./configure ${{ env.arg }}
-        make -j16
+        make -j$(nproc)
 
-    - name: Prepare Artifacts
+    - name: 准备产物
       shell: cmd
       run: |
-        md ${{ github.workspace }}\artifacts
-        cd ${{ github.workspace }}\artifacts
-        move ${{ github.workspace }}\build\*.exe
-        move ${{ github.workspace }}\build\pc-bios share
-        robocopy ${{ github.workspace }}\pc-bios share /xn /xo /mov
-        del share\*.bz2
+        mkdir artifacts-amd64
+        copy build\qemu-system-arm.exe artifacts-amd64\
+        robocopy build\pc-bios artifacts-amd64\pc-bios /E
+        echo "此版本适用于 Windows x86_64 (AMD64)" > artifacts-amd64/README.txt
 
-    - name: Prepare Artifacts (dynamic only)
-      shell: cmd
-      if: ${{ matrix.mode == 'dynamic' }}
-      run: |
-        cd ${{ github.workspace }}\artifacts
-        copy D:\a\_temp\msys64\mingw64\bin\*.dll
-        md lib\gdk-pixbuf-2.0\2.10.0
-        fsutil file createNew lib\gdk-pixbuf-2.0\2.10.0\loaders.cache 0
-        move ${{ github.workspace }}\build\po share\locale
-
-    - name: Upload artifact
+    - name: 上传产物 (amd64)
       uses: actions/upload-artifact@main
       with:
-        name: QEMU (${{ matrix.mode }} build)
-        path: ${{ github.workspace }}/artifacts
+        name: qemu-tegra2-windows-amd64
+        path: artifacts-amd64
+        compression-level: 9
+
+  build-windows-arm64:
+    name: Windows ARM64
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+    - name: Checkout quadcore 分支
+      uses: actions/checkout@main
+      with:
+        ref: quadcore
+
+    - name: Setup MSYS2 (ARM64)
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: clangarm64
+        update: true
+        install: >-
+          git make bison diffutils flex grep sed
+          base-devel python python-setuptools python-pip
+        pacboy: >-
+          toolchain:p binutils:p capstone:p ccache:p curl:p
+          cyrus-sasl:p dtc:p gcc:p glib2:p gnutls:p gtk3:p
+          libgcrypt:p libjpeg-turbo:p libnfs:p libpng:p
+          libssh:p libtasn1:p libusb:p lzo2:p nettle:p
+          ninja:p pixman:p pkgconf:p SDL2:p SDL2_image:p
+          snappy:p spice:p usbredir:p zstd:p libslirp:p
+
+    - name: 验证 Python 环境
+      run: |
+        python3 --version
+        python3 -m pip install --upgrade pip setuptools wheel
+
+    - name: 配置 QEMU (ARM64)
+      run: |
+        ./configure --target-list=arm-softmmu \
+                    --enable-whpx \
+                    --enable-gtk \
+                    --enable-slirp \
+                    --enable-sdl \
+                    --disable-werror \
+                    --cross-prefix=aarch64-w64-mingw32-
+
+    - name: 编译
+      run: |
+        make -j$(nproc)
+
+    - name: 准备产物
+      shell: cmd
+      run: |
+        mkdir artifacts-arm64
+        copy build\qemu-system-arm.exe artifacts-arm64\
+        robocopy build\pc-bios artifacts-arm64\pc-bios /E
+        echo "此版本适用于 Windows ARM64" > artifacts-arm64/README.txt
+
+    - name: 上传产物 (arm64)
+      uses: actions/upload-artifact@main
+      with:
+        name: qemu-tegra2-windows-arm64
+        path: artifacts-arm64
         compression-level: 9
