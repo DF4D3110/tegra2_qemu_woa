@@ -24,45 +24,14 @@ jobs:
         msystem: mingw64
         update: true
         install: >-
-          git
-          make
-          bison
-          diffutils
-          flex
-          grep
-          sed
-          base-devel
+          git make bison diffutils flex grep sed base-devel
         pacboy: >-
-          toolchain:p
-          binutils:p
-          capstone:p
-          ccache:p
-          curl:p
-          cyrus-sasl:p
-          dtc:p
-          gcc:p
-          glib2:p
-          gnutls:p
-          gtk3:p
-          libgcrypt:p
-          libjpeg-turbo:p
-          libnfs:p
-          libpng:p
-          libssh:p
-          libtasn1:p
-          libusb:p
-          lzo2:p
-          nettle:p
-          ninja:p
-          pixman:p
-          pkgconf:p
-          SDL2:p
-          SDL2_image:p
-          snappy:p
-          spice:p
-          usbredir:p
-          zstd:p
-          libslirp:p
+          toolchain:p binutils:p capstone:p ccache:p curl:p
+          cyrus-sasl:p dtc:p gcc:p glib2:p gnutls:p gtk3:p
+          libgcrypt:p libjpeg-turbo:p libnfs:p libpng:p
+          libssh:p libtasn1:p libusb:p lzo2:p nettle:p
+          ninja:p pixman:p pkgconf:p SDL2:p SDL2_image:p
+          snappy:p spice:p usbredir:p zstd:p libslirp:p
 
     - name: 安装 Python 和 pip
       run: |
@@ -77,80 +46,27 @@ jobs:
         python3 --version
         python3 -m pip --version
 
-    - name: 配置 QEMU (amd64)
+    - name: 配置 QEMU (禁用 libnfs)
       run: |
         ./configure --target-list=arm-softmmu \
                     --enable-whpx \
                     --enable-gtk \
                     --enable-slirp \
                     --enable-sdl \
-                    --disable-werror
+                    --disable-werror \
+                    --disable-libnfs
 
-    - name: 编译完整程序
+    - name: 编译 (仅主程序)
       run: |
-        make -j$(nproc) || true
+        make qemu-system-arm.exe -j$(nproc)
 
-    - name: 准备产物 (包含所有运行库)
+    - name: 准备产物
       shell: cmd
       run: |
         mkdir artifacts-amd64
-        copy build\qemu-system-arm.exe artifacts-amd64\
-        robocopy build\pc-bios artifacts-amd64\pc-bios /E
-        
-        :: 复制所有需要的运行库 (DLL)
-        copy D:\a\_temp\msys64\mingw64\bin\libgio-2.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libglib-2.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libgmodule-2.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libgobject-2.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libintl-8.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libpcre2-8-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libpixman-1-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libSDL2-2.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libgtk-3-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libgdk-3-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libcairo-2.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libpango-1.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libpangocairo-1.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libpangoft2-1.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libfontconfig-1.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libfreetype-6.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libharfbuzz-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libepoxy-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libpng16-16.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libjpeg-8.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libslirp-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libzstd.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\liblzo2-2.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libgnutls-30.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libnettle-8.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libhogweed-6.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libgmp-10.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libtasn1-6.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libp11-kit-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libffi-8.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libgcc_s_seh-1.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libwinpthread-1.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libstdc++-6.dll artifacts-amd64\
-        
-        :: 复制 GTK 相关运行库
-        copy D:\a\_temp\msys64\mingw64\bin\libgdk_pixbuf-2.0-0.dll artifacts-amd64\
-        copy D:\a\_temp\msys64\mingw64\bin\libatk-1.0-0.dll artifacts-amd64\
-        
-        :: 复制 GIO 模块 (用于 GTK 文件对话框等)
-        mkdir artifacts-amd64\lib\gio\modules
-        copy D:\a\_temp\msys64\mingw64\lib\gio\modules\*.dll artifacts-amd64\lib\gio\modules\
-        
-        :: 复制 GDK-Pixbuf 加载器
-        mkdir artifacts-amd64\lib\gdk-pixbuf-2.0\2.10.0\loaders
-        copy D:\a\_temp\msys64\mingw64\lib\gdk-pixbuf-2.0\2.10.0\loaders\*.dll artifacts-amd64\lib\gdk-pixbuf-2.0\2.10.0\loaders\
-        copy D:\a\_temp\msys64\mingw64\lib\gdk-pixbuf-2.0\2.10.0\loaders.cache artifacts-amd64\lib\gdk-pixbuf-2.0\2.10.0\
-        
-        :: 复制 Pango 模块
-        mkdir artifacts-amd64\lib\pango\1.8.0\modules
-        copy D:\a\_temp\msys64\mingw64\lib\pango\1.8.0\modules\*.dll artifacts-amd64\lib\pango\1.8.0\modules\
-        
+        if exist build\qemu-system-arm.exe copy build\qemu-system-arm.exe artifacts-amd64\
+        if exist build\pc-bios robocopy build\pc-bios artifacts-amd64\pc-bios /E
         echo 此版本适用于 Windows x86_64 (AMD64) > artifacts-amd64\README.txt
-        echo 包含所有运行库 >> artifacts-amd64\README.txt
 
     - name: 上传产物 (amd64)
       uses: actions/upload-artifact@main
